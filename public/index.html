@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delivery Tracking</title>
+</head>
+<body>
+    <h1 align="center">Delivery Tracking System</h1>
+
+    <!-- add new delivery -->
+    <h2 align="center">Add Delivery</h2>
+    <form id="form"  align="center">
+        <p>Tracking Number: <input type="text" id="tracking_number" required></p>
+        <p>Customer Name: <input type="text" id="customer_name" required></p>
+        <p>Destination: <input type="text" id="destination" required></p>
+        <p>Delivery Date: <input type="date" id="delivery_date" required></p>
+        <button type="submit">Add</button>
+    </form>
+    <p id="message" align="center"></p>
+
+    <!-- filter delivery by ID -->
+    <h2 align="center">Find Delivery by ID</h2>
+    <div align="center">
+        <input type="text" id="searchId" placeholder="Enter ID">
+        <button onclick="findDelivery()">Find</button>
+        <button onclick="deleteDelivery()">Delete</button>
+        <button onclick="showAll()">Show All</button>
+        <p id="searchResult"></p>
+    </div>
+
+
+    <!-- display all deliveries -->
+    <h2 align="center">All Deliveries</h2>
+    <table border="1" align="center">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tracking Number</th>
+                <th>Customer Name</th>
+                <th>Destination</th>
+                <th>Delivery Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="deliveryList"></tbody>
+    </table>
+
+    <script align="center">
+        async function loadDeliveries() {
+            const res = await fetch('/api/deliveries');
+            const deliveries = await res.json();
+            renderTable(deliveries);
+        }
+
+        // display given deliveries in the table
+        function renderTable(deliveries) {
+            let rows = '';
+            deliveries.forEach(d => {
+                rows += `<tr>
+                    <td>${d.id}</td>
+                    <td>${d.tracking_number}</td>
+                    <td>${d.customer_name}</td>
+                    <td>${d.destination}</td>
+                    <td>${d.delivery_date}</td>
+                    <td>${d.status}</td>
+                </tr>`;
+            });
+            document.getElementById('deliveryList').innerHTML = rows;
+        }
+        // fetch delivery by id
+        document.getElementById('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const newDelivery = {
+                tracking_number: document.getElementById('tracking_number').value,
+                customer_name: document.getElementById('customer_name').value,
+                destination: document.getElementById('destination').value,
+                delivery_date: document.getElementById('delivery_date').value
+            };
+
+            const res = await fetch('/api/deliveries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newDelivery)
+            });
+            const result = await res.json();
+            
+            if (res.ok) {
+                document.getElementById('message').innerText = 'Delivery added!';
+                document.getElementById('form').reset();
+                loadDeliveries();
+            } else {
+                document.getElementById('message').innerText = result.message;
+            }
+        });
+
+        async function findDelivery() {
+            const id = document.getElementById('searchId').value.trim();
+            if (!id) {
+                showAll();
+                return;
+            }
+
+            const res = await fetch('/api/deliveries/' + id);
+            const result = await res.json();
+
+            if (res.ok) {
+                renderTable([result]);
+                document.getElementById('searchResult').innerText = '';
+            } else {
+                renderTable([]);
+                document.getElementById('searchResult').innerText = result.message;
+            }
+        }
+
+        // clear the search and show every delivery again
+        function showAll() {
+            document.getElementById('searchId').value = '';
+            document.getElementById('searchResult').innerText = '';
+            loadDeliveries();
+        }
+
+        async function deleteDelivery() {
+            const id = document.getElementById('searchId').value;
+            const res = await fetch('/api/deliveries/' + id, { method: 'DELETE' });
+            const result = await res.json();
+
+            document.getElementById('searchResult').innerText = result.message;
+            loadDeliveries();
+        }
+
+        loadDeliveries();
+    </script>
+</body>
+</html>
